@@ -1,0 +1,77 @@
+import numpy as np
+
+def cost(P):
+    Pcost=np.zeros((P.shape[0],len(class_num)))
+    for i in range(len(class_num)):
+        for j in range(P.shape[0]):
+            Pcost[j,i]=c[i,P[j,i]]
+    return np.sum(Pcost,axis=1)
+def weight(P):
+    Pweight=np.zeros((P.shape[0],len(class_num)))
+    for i in range(len(class_num)):
+        for j in range(P.shape[0]):
+            Pweight[j,i]=w[i,P[j,i]]
+    return np.sum(Pweight,axis=1)
+def penalize(P):
+    pk=weight(P)
+    pk[pk<=W]=W
+    pk=(pk-W)*a
+    return pk
+def eval(P):
+    return 1/(cost(P)+penalize(P))
+def elitist(P):
+    return np.argmax(eval(P))
+    
+# initialize
+class_num=np.array([8,5,6,8,7,5,8,6])
+c=np.array([[3,4,5,4,8,5,4,4],[7,9,8,4,5,0,0,0],[5,6,9,8,4,6,0,0],[2,8,7,5,4,3,7,8],[8,5,7,9,7,4,7,0],[6,8,7,9,5,0,0,0],[6,9,7,4,3,7,9,8],[9,2,5,5,8,6,0,0]])
+w=np.array([[6,8,5,4,9,5,9,3],[6,5,3,5,9,0,0,0],[8,6,4,8,4,3,0,0],[9,4,8,9,4,9,4,5],[3,7,4,2,3,8,5,0],[8,3,2,8,6,0,0,0],[5,4,3,8,9,2,4,4],[2,9,2,6,4,3,0,0]])
+W=40
+N=20
+pc=0.4
+M=int(N*pc)
+a=10
+pm=0.1
+T=1000
+P=np.zeros((N,len(class_num)),dtype=int)
+for i in range(len(class_num)):
+    P[:,i]=np.random.randint(0,class_num[i],N)
+    
+# main program
+for genera in range(T):
+    offspring=np.zeros((M,len(class_num)),dtype=int)
+    for t in range(M):
+        choice=np.random.choice(np.arange(N),2,replace=False)
+        choiceP=P[choice,:]
+        choiceP=eval(choiceP)/np.sum(eval(choiceP))
+        C=np.zeros(len(class_num),dtype=int)
+        for i in range(len(C)):
+            if P[choice[0],i]==P[choice[1],i]:
+                C[i] = P[choice[0], i]
+            else:
+                if np.random.rand(1)<choiceP[0]:
+                    C[i] = P[choice[0], i]
+                else:
+                    C[i] = P[choice[1], i]
+        if np.random.rand(1)<pm:
+            choice2mutation=np.random.randint(0,len(class_num))
+            C[choice2mutation]=np.random.randint(0,class_num[choice2mutation])
+        offspring[t,:]=C
+
+    evalall=np.append(eval(P),eval(offspring))
+    choice_new=np.random.choice(np.arange(len(evalall)),N,replace=False,p=evalall/np.sum(evalall))
+    if elitist(P) not in choice_new:
+        choice_new[0]=elitist(P)
+    P0=P.copy()
+    for i in range(N):
+        if choice_new[i]<=N-1:
+            P[i,:]=P0[choice_new[i],:]
+        else:
+            P[i,:]=offspring[choice_new[i]-N,:]
+
+best=P[np.argmax(eval(P)),:]
+print (best)
+print (cost(P)[np.argmax(eval(P))])
+print (weight(P)[np.argmax(eval(P))])
+print (penalize(P)[np.argmax(eval(P))])
+print (np.max(eval(P)))
