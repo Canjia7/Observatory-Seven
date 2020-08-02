@@ -1,0 +1,74 @@
+import numpy as np
+def fusion_operator(p1,p2):
+    Phen1=np.sum(p1*c)
+    Phen2=np.sum(p2*c)
+    p=np.zeros(len(c),dtype=int)
+    for i in range(len(c)):
+        if p1[i]==p2[i]:
+            p[i]=p1[i]
+        else:
+            p[i]=np.random.choice([p1[i],p2[i]],1,p=[Phen1/(Phen1+Phen2),Phen2/(Phen1+Phen2)])
+    return p
+def mutation(p):
+    choice2mutation=np.random.choice(np.arange(len(c)),mutation_num)
+    mp=np.random.rand(mutation_num)
+    for i in range(mutation_num):
+        if mp[i]<0.2:
+            if p[choice2mutation[i]]==0:
+                p[choice2mutation[i]]=1
+            else:
+                p[choice2mutation[i]]=0
+    return p
+def redundance(p):
+    if np.min(np.sum(p*A,axis=1))!=0:
+        return p
+    else:
+        U=np.arange(len(c))[np.sum(p*A,axis=1)==0]
+        for i in U:
+            for j in np.argsort(c):
+                if p[j]==0:
+                    p[j]=1
+                    if np.sum(p * A, axis=1)[i] != 0:
+                        break
+                    else:
+                        p[j]=0
+        return p
+        
+#initialize
+c=np.array([10,15,11,10,8,2])
+A=np.array([[1,1,0,1,0,0],
+            [0,0,1,1,0,0],
+            [1,1,1,0,0,0],
+            [0,0,0,0,1,1],
+            [0,0,1,0,0,1],
+            [0,0,0,1,1,0]])
+N=20
+M=20
+mutation_num=2
+Phen=np.zeros(N)
+t=0
+P=np.random.randint(0,2,(N,6))
+for i in range(N):
+    P[i,:]=redundance(P[i,:])
+
+#main program
+while t<M:
+    for i in range(N):
+        Phen[i]=np.sum(P[i,:]*c)
+    choice=np.random.choice(np.arange(N),2,p=Phen/np.sum(Phen))
+    C=fusion_operator(P[choice[0],:],P[choice[1],:])
+    C=mutation(C)
+    C=redundance(C)
+
+    same_flag=0
+    for i in range(N):
+        if np.sum(C==P[i,:])==len(c):
+            same_flag=1
+    if same_flag==0:
+        t+=1
+        PP=Phen>Phen.mean()
+        P[np.random.choice(np.arange(N),1,p=PP/np.sum(PP))[0],:]=C
+
+for i in range(N):
+    Phen[i]=np.sum(P[i,:]*c)
+print (P[np.argmin(Phen),:])
