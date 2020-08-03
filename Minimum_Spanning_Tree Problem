@@ -1,0 +1,59 @@
+import numpy as np
+
+def prufer(p):
+    p=p+1
+    pruferarray=np.zeros((vertices_num-1,2),dtype=int)
+    p_index=0
+    G=np.arange(vertices_num)+1
+    for t in range(vertices_num-2):
+        for i in range(vertices_num):
+            if G[i]!=0:
+                if G[i] not in p[p_index:]:
+                    pruferarray[t,0]=G[i]
+                    pruferarray[t,1]=p[p_index]
+                    p_index+=1
+                    G[i]=0
+                    break
+    for i in range(vertices_num):
+        if G[i]!=0:
+            if pruferarray[-1,0]==0:
+                pruferarray[-1,0]=G[i]
+            else:
+                pruferarray[-1,1]=G[i]
+    return pruferarray-1
+def eval(P):
+    Peval=np.zeros(P.shape[0])
+    for i in range(P.shape[0]):
+        tree=prufer(P[i,:])
+        cost=0
+        for j in range(tree.shape[0]):
+            cost+=w[tree[j,0],tree[j,1]]
+        Peval[i]=cost
+    return Peval
+
+# setting
+w=np.array([[0,6,1,5,99,99],[6,0,5,99,3,99],[1,5,0,5,6,4],[5,99,5,0,99,2],[99,3,6,99,0,6],[99,99,4,2,6,0]])
+vertices_num=6
+N=50
+pc=0.2
+pm=0.3
+M=int(N*pc)
+T=1000
+P=np.random.randint(0,vertices_num,(N,vertices_num-2),dtype=int)
+
+# main program
+for t in range(T):
+    offspring=np.zeros((M,vertices_num-2),dtype=int)
+    for i in range(M):
+        choice2offspring=np.random.choice(N,2,replace=False)
+        C=(P[choice2offspring[0],:]+P[choice2offspring[1],:])/2
+        C=C.astype(int)
+        if np.random.rand(1)<pm:
+            C[np.random.randint(vertices_num-2)]=np.random.randint(vertices_num)
+        offspring[i,:]=C
+    Pall=np.append(P,offspring,axis=0)
+    evalall=eval(Pall)
+    P=Pall[np.argsort(evalall)[0:N]]
+
+print (eval(P))
+print (P[np.argmax(eval(P)),:]+1)
