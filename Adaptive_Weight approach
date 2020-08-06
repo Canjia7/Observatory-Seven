@@ -1,0 +1,71 @@
+import numpy as np
+import matplotlib.pyplot as plt
+def f(n,x):
+    if n==0:
+        return -x**2
+    else:
+        return -(x - 2) ** 2
+def eval(P):
+    evalP=np.zeros(P.shape[0])
+    for i in range(P.shape[0]):
+        for j in range(2):
+            evalP[i]+=(f(j,P[i])-minz[j])/(maxz[j]-minz[j])
+    return evalP
+def evaPareto(P):
+    Pareto=np.array([])
+    for i in range(P.shape[0]):
+        ParetoFlag = 1
+        for j in range(P.shape[0]):
+            if i!=j:
+                if f(0,P)[j]>f(0,P)[i] and f(1,P)[j]>f(1,P)[i]:
+                    ParetoFlag = 0
+                    break
+        if ParetoFlag == 1:
+            Pareto=np.append(Pareto,P[i])
+    return Pareto
+N=50
+pc=0.5
+pm=0.1
+T=20
+M=int(N*pc)
+P=np.random.uniform(-2,4,N)
+Paretoall=np.array([])
+
+for t in range(T):
+    offspring=np.zeros(M)
+    for i in range(M):
+        choice=np.random.choice(range(N),2,replace=False)
+        offspring[i]=(P[choice[0]]+P[choice[1]])/2
+    Pall=np.append(P,offspring)
+    for i in range(Pall.shape[0]):
+        if np.random.rand(1)<pm:
+            Pall[i]=np.random.uniform(-2,4,1)
+
+    maxz=np.zeros(2)
+    minz=np.zeros(2)
+    for i in range(2):
+        maxz[i]=np.max(f(i,Pall))
+        minz[i]=np.min(f(i,Pall))
+
+    Palleval=eval(Pall)
+    Paretoall=np.append(Paretoall,evaPareto(Pall))
+    Paretoall=evaPareto(np.unique(Paretoall))
+    choice=np.random.choice(range(N+M),N,replace=False,p=Palleval/np.sum(Palleval))
+    for i in range(P.shape[0]):
+        if choice[i]<N:
+            P[i]=Pall[choice[i]]
+        else:
+            P[i]=offspring[choice[i]-N]
+    plt.scatter(f(0, P), f(1, P),alpha=0.1,color='b')
+
+print (Paretoall)
+x=np.linspace(-2,4,100)
+plt.plot(f(0,x),f(1,x))
+plt.scatter(f(0,Paretoall),f(1,Paretoall),alpha=0.5,color='r',label='Pareto')
+plt.xlabel('f1')
+plt.ylabel('f2')
+plt.legend()
+plt.show()
+
+
+
