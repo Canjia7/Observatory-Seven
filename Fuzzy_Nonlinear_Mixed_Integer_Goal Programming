@@ -1,0 +1,117 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def f1(pi,pr):
+    object=0
+    for j in range(4):
+        object+=(1-(1-pr[j])*pi[j])
+    return object
+def f2(pi,pr):
+    object=0
+    alpha=np.array([1,2.3,0.3,2.3])*10e-5
+    beta=np.array([1.5,1.5,1.5,1.5])
+    for j in range(4):
+        object+=alpha[j]*(-t0/np.log(pr[j]))*(pi[j]+np.exp(pi[j]/4))
+    return object
+def f3(pi):
+    object=0
+    d=np.array([6,6,8,7])
+    for j in range(4):
+        object+=d[j]*pi[j]*np.exp(pi[j]/4)
+    return object
+def g(pi):
+    object=0
+    v=np.array([1,2,3,2])
+    for j in range(4):
+        object+=v[j]*(pi[j]**2)
+    return object
+def muhigh(f,k):
+    if f<b[k]-tLR[k]:
+        return 0
+    elif f>b[k]:
+        return 1
+    else:
+        return 1-(f-b[k]+tLR[k])/tLR[k]
+def mulow(f,k):
+    if f<b[k]:
+        return 1
+    elif f>b[k]+tLR[k]:
+        return 0
+    else:
+        return 1-(f-b[k])/tLR[k]
+#initialize
+pop_size=20
+pm=0.1
+pc=0.4
+max_gen=2000
+Pi=np.random.randint(1,11,(pop_size,4))
+Pr=np.random.uniform(0.5,1,(pop_size,4))
+b=np.array([0.75,400,500])
+V=250
+t0=1000
+tLR=np.array([0.25,300,360])
+weight=np.array([0.5,0.25,0.25])
+punish=0.5
+for t in range(max_gen):
+    #crossover
+    offspringi=np.array([])
+    offspringr=np.array([])
+    for i in range(pop_size):
+        if np.random.rand(1)<pc:
+            choice=np.random.choice(np.arange(pop_size),2,replace=False)
+            c1=np.random.rand(1)
+            offspringi=np.append(offspringi,c1*Pi[choice[0],:]+(1-c1)*Pi[choice[1],:])
+            offspringr=np.append(offspringr,(1-c1)*Pr[choice[0],:]+c1*Pr[choice[1],:])
+    offspringi=np.floor(offspringi.reshape(-1,4))
+    offspringr=offspringr.reshape(-1,4)
+    #mumation
+    for i in range(pop_size):
+        if np.random.rand(1)<pm:
+            choice=np.random.choice(np.arange(pop_size),1)
+            choice2=np.random.randint(0,8,1)
+            if choice2<4:
+                Pi[choice,choice2]=np.random.randint(1,11,1)
+            else:
+                Pr[choice,choice2-4]=np.random.uniform(0.5,1,1)
+    #eval
+    evalall=np.zeros((pop_size+offspringi.shape[0]))
+    for i in range(pop_size):
+        evalall[i]=weight[0]*muhigh(f1(Pi[i,:],Pr[i,:]),0)+weight[1]*mulow(f2(Pi[i,:],Pr[i,:]),1)+weight[2]*mulow(f3(Pi[i,:]),2)
+        if g(Pi[i,:])>V:
+            evalall[i]*=punish
+    for i in range(offspringi.shape[0]):
+        evalall[i+pop_size]=weight[0]*muhigh(f1(offspringi[i,:],offspringr[i,:]),0)+weight[1]*mulow(f2(offspringi[i,:],offspringr[i,:]),1)+weight[2]*mulow(f3(offspringi[i,:]),2)
+        if g(offspringi[i,:])>V:
+            evalall[i+pop_size]*=punish
+    plt.scatter(t,np.mean(evalall))
+    #selection
+    choice=np.random.choice(np.arange(evalall.shape[0]),pop_size,p=evalall/np.sum(evalall))
+    if np.max(evalall[:pop_size]) not in choice:
+        choice[np.random.randint(0,pop_size,1)]=np.argmax(evalall[:pop_size])
+    Pinew=np.zeros((pop_size,4))
+    Prnew=np.zeros((pop_size,4))
+    for i in range(pop_size):
+        if choice[i]<pop_size:
+            Pinew[i, :] = Pi[choice[i], :]
+            Prnew[i, :] = Pr[choice[i], :]
+        else:
+            Pinew[i, :] = offspringi[choice[i]-pop_size, :]
+            Prnew[i, :] = offspringr[choice[i]-pop_size, :]
+    Pi=Pinew
+    Pr=Prnew
+
+evalall=np.zeros((pop_size))
+for i in range(pop_size):
+    evalall[i]=weight[0]*muhigh(f1(Pi[i,:],Pr[i,:]),0)+weight[1]*mulow(f2(Pi[i,:],Pr[i,:]),1)+weight[2]*mulow(f3(Pi[i,:]),2)
+    if g(Pi[i])>V:
+         evalall[i]*=punish
+bestPi=Pi[np.argmax(evalall),:]
+bestPr=Pr[np.argmax(evalall),:]
+print (bestPi)
+print (bestPr)
+print ('bestf1=',f1(bestPi,bestPr))
+print ('bestf2=',f2(bestPi,bestPr))
+print ('bestf3=',f3(bestPi))
+print ('g=',g(bestPi))
+print (np.max(evalall))
+plt.show()
