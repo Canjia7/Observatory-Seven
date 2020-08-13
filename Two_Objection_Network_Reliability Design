@@ -1,0 +1,193 @@
+import numpy as np
+import matplotlib.pyplot as plt
+def prufer2tree(P):
+    tree=np.zeros((center_num,center_num),dtype=int)
+    G=np.arange(center_num)+1
+    while P.shape[0]!=0:
+        for i in range(G.shape[0]):
+            if G[i] not in P:
+                tree[G[i]-1, P[0]-1] = 1
+                tree[P[0]-1, G[i]-1] = 1
+                P=np.delete(P,0)
+                G=np.delete(G,i)
+                break
+    tree[G[0]-1,G[1]-1]=1
+    tree[G[1]-1, G[0]-1] = 1
+    return tree
+def cluster2matrix(P):
+    matrixP=np.zeros((center_num,P.shape[0]))
+    for i in range(P.shape[0]):
+        matrixP[P[i]-1,i]=1
+    return matrixP
+def reliability(P1,P2):
+    x1 = prufer2tree(P1)
+    x2 = cluster2matrix(P2)
+    r=np.zeros(36)
+    o=np.array([0.95,0.95,0.95,0.95,0.95,0.95,
+                0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9])
+    e=1-o
+    i=35
+    while i>0:
+        for j in range(36):
+            if i!=j:
+                if i<6 and j<6:
+                    if x1[i,j]==1:
+                        r[j] = r[j] * e[i] + r[i] * e[j] + o[i] * e[j]
+                        o[j] = o[i] * o[j] * 0.9 + o[j] * e[i]
+                        e[j] = e[i] * e[j]
+                        i -= 1
+                if i>=6 and j<6:
+                    if x2[j,i-6]==1:
+                        r[j] = r[j] * e[i] + r[i] * e[j] + o[i] * e[j]
+                        o[j] = o[i] * o[j] * 0.85 + o[j] * e[i]
+                        e[j] = e[i] * e[j]
+                        i -= 1
+    return r[0]+o[0]+e[0]
+w1=np.array([[0,125,110,210,221,105],
+             [125,0,107,202,154,167],
+             [110,107,0,175,163,231],
+             [210,202,175,0,217,206],
+             [221,154,163,217,0,157],
+             [105,167,231,206,157,0]])
+w2=np.array([[34,62,7,46,26,19,31,29,26,15,16,68,37,15,100,58,10,49,86,100,36,31,49,78,100,22,98,80,8,98],
+             [15,7,80,35,54,85,22,71,81,5,29,46,37,29,79,17,20,39,25,84,5,36,22,12,86,96,9,79,15,54],
+             [42,27,25,39,52,90,80,35,58,19,2,34,43,43,51,64,19,36,26,36,16,71,41,51,52,50,13,34,58,73],
+             [66,76,84,81,20,45,10,61,34,86,50,18,21,94,25,27,50,61,81,33,54,18,93,7,62,18,75,28,12,37],
+             [73,62,34,89,44,85,96,78,7,57,50,43,48,78,25,53,16,45,44,71,11,69,50,93,86,62,18,23,9,73],
+             [22,44,24,32,31,3,50,47,76,11,92,63,44,24,30,63,46,66,44,70,23,10,72,7,63,9,17,87,41,64]])
+center_num=w1.shape[0]
+user_num=w2.shape[1]
+pc=0.3
+pm=0.7
+pop_size=10
+max_gen=500
+fmax=np.zeros(2)
+fmin=np.zeros(2)+10e8
+gamma=0.1
+
+
+P_center=np.random.randint(1,center_num+1,(pop_size,center_num-2),dtype=int)
+P_user=np.random.randint(1,center_num+1,(pop_size,user_num),dtype=int)
+for gen in range(max_gen):
+    #crossover
+    offspring_center=np.zeros(center_num-2,dtype=int)
+    offspring_user=np.zeros(user_num,dtype=int)
+    for i in range(pop_size):
+        if np.random.rand(1)<pc:
+            choice=np.random.choice(np.arange(pop_size),2,replace=False)
+            offspring_center2=np.zeros(center_num-2,dtype=int)
+            offspring_user2=np.zeros(user_num,dtype=int)
+            for j in range(center_num-2):
+                if np.random.rand(1)<0.5:
+                    offspring_center2[j] = P_center[choice[0], j]
+                else:
+                    offspring_center2[j] = P_center[choice[1], j]
+            for j in range(user_num):
+                if np.random.rand(1)<0.5:
+                    offspring_user2[j] = P_user[choice[0], j]
+                else:
+                    offspring_user2[j] = P_user[choice[1], j]
+            offspring_center=np.vstack((offspring_center,offspring_center2))
+            offspring_user=np.vstack((offspring_user,offspring_user2))
+    #mutation
+    for i in range(pop_size):
+        if np.random.rand(1)<pm:
+            choice=np.random.choice(np.arange(center_num-2),2,replace=False)
+            P_center[i,choice[0]],P_center[i,choice[1]]=P_center[i,choice[1]],P_center[i,choice[0]]
+            choice=np.random.choice(np.arange(user_num),2,replace=False)
+            P_user[i,choice[0]],P_user[i,choice[1]]=P_user[i,choice[1]],P_user[i,choice[0]]
+    #connection
+    if np.sum(offspring_center)!=0:
+        offspring_center=offspring_center[1:]
+        offspring_user=offspring_user[1:]
+        P_center=np.vstack((P_center,offspring_center))
+        P_user=np.vstack((P_user,offspring_user))
+        pop_size+=offspring_center.shape[0]
+    #eval
+    f1=np.zeros(pop_size)
+    f2=np.zeros(pop_size)
+    for i in range(pop_size):
+        x1=prufer2tree(P_center[i])
+        x2=cluster2matrix(P_user[i])
+        f1[i]=np.sum(x1*w1)/2
+        f2[i]=np.sum(x2*w2)
+    fall=np.vstack((f1,f2))
+    for i in range(2):
+        if fmax[i]<np.max(fall[i]):
+            fmax[i]=np.max(fall[i])
+        if fmin[i]>np.min(fall[i]):
+            fmin[i]=np.min(fall[i])
+    alpha=np.zeros(2)
+    beta=np.zeros(2)
+    for i in range(2):
+        alpha[i]=(fmax[i]-fmin[i])/fmax[i]
+    for i in range(2):
+        beta[i]=alpha[i]/np.sum(alpha)
+    distance=np.zeros((2,pop_size))
+    for i in range(pop_size):
+        for j in range(2):
+            distance[j,i]=(fmax[j]-fall[j,i]+gamma)/(fmax[j]-fmin[j]+gamma)
+    eval=np.zeros(pop_size)
+    for i in range(pop_size):
+        eval[i]=beta[0]*distance[0,i]+beta[1]*distance[1,i]
+
+    R=np.zeros(pop_size)
+    for i in range(pop_size):
+        R[i]=reliability(P_center[i], P_user[i])
+    plt.scatter(f1+f2,1-R,alpha=0.02,color='blue')
+
+
+    #selection
+    selection_num=np.random.rand(1)
+    selectionP=selection_num*eval+(1-selection_num)*R
+    if np.sum(offspring_center) != 0:
+        choice=np.random.choice(np.arange(pop_size),pop_size-offspring_center.shape[0],replace=False,p=selectionP/np.sum(selectionP))
+    else:
+        choice = np.random.choice(np.arange(pop_size), pop_size, replace=False,
+                                  p=selectionP / np.sum(selectionP))
+    if np.argmax(selectionP) not in choice:
+        choice[0]=np.argmax(selectionP)
+    P_center=P_center[choice]
+    P_user=P_user[choice]
+    if np.sum(offspring_center) != 0:
+        pop_size-=offspring_center.shape[0]
+
+
+
+
+
+f1=np.zeros(pop_size)
+f2=np.zeros(pop_size)
+for i in range(pop_size):
+    x1=prufer2tree(P_center[i])
+    x2=cluster2matrix(P_user[i])
+    f1[i]=np.sum(x1*w1)/2
+    f2[i]=np.sum(x2*w2)
+fall=np.vstack((f1,f2))
+for i in range(2):
+    if fmax[i]<np.max(fall[i]):
+        fmax[i]=np.max(fall[i])
+    if fmin[i]>np.min(fall[i]):
+        fmin[i]=np.min(fall[i])
+alpha=np.zeros(2)
+beta=np.zeros(2)
+for i in range(2):
+    alpha[i]=(fmax[i]-fmin[i])/fmax[i]
+for i in range(2):
+    beta[i]=alpha[i]/np.sum(alpha)
+distance=np.zeros((2,pop_size))
+for i in range(pop_size):
+    for j in range(2):
+        distance[j,i]=(fmax[j]-fall[j,i]+gamma)/(fmax[j]-fmin[j]+gamma)
+eval=np.zeros(pop_size)
+for i in range(pop_size):
+    eval[i]=beta[0]*distance[0,i]+beta[1]*distance[1,i]
+R=np.zeros(pop_size)
+for i in range(pop_size):
+    R[i]=reliability(P_center[i], P_user[i])
+plt.scatter(f1+f2,1-R,color='red',alpha=0.5)
+plt.show()
+print(P_center[np.argmin(f1+f2)])
+print (P_user[np.argmin(f1+f2)])
+print ((f1+f2)[np.argmin(f1+f2)])
+
